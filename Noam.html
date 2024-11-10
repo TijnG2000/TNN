@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Map</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        #map { 
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .popup-content {
+            text-align: center;
+        }
+        .popup-content img {
+            max-width: 200px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script>
+        // Initialize the map
+        var map = L.map('map').setView([40.7128, -74.0060], 13);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(map);
+
+        // Your locations
+        var locations = [
+            {
+                coords: [40.7128, -74.0060],
+                title: "New York City",
+                description: "The Big Apple",
+                image: "/api/placeholder/200/150",  // Replace with your popup image
+                iconUrl: 'Sliff.png'                // Replace with your pin image
+            },
+            {
+                coords: [40.7589, -73.9851],
+                title: "Empire State Building",
+                description: "Famous skyscraper in Manhattan",
+                image: "/api/placeholder/200/150",  // Replace with your popup image
+                iconUrl: 'icon2.png'                // Replace with your pin image
+            }
+        ];
+
+        // Store markers globally so we can update them
+        var markers = [];
+        var markerIcons = [];
+
+        // Function to calculate size based on zoom level
+        function getIconSize(baseWidth, baseHeight, zoom) {
+            // Start scaling down at zoom level 10
+            let scale = 1;
+            if (zoom < 10) {
+                scale = Math.max(0.2, zoom / 10); // Minimum 20% of original size
+            }
+            
+            return [baseWidth * scale, baseHeight * scale];
+        }
+
+        // Function to create initial markers
+        function createMarker(loc) {
+            var img = new Image();
+            img.onload = function() {
+                // Calculate initial size (max width 50px)
+                const ratio = this.height / this.width;
+                const baseWidth = Math.min(160, this.width);
+                const baseHeight = baseWidth * ratio;
+
+                var customIcon = L.icon({
+                    iconUrl: loc.iconUrl,
+                    iconSize: getIconSize(baseWidth, baseHeight, map.getZoom()),
+                    iconAnchor: [baseWidth/2, baseHeight],
+                    popupAnchor: [0, -baseHeight]
+                });
+                
+                var marker = L.marker(loc.coords, {icon: customIcon}).addTo(map);
+                
+                var popupContent = `
+                    <div class="popup-content">
+                        <h3>${loc.title}</h3>
+                        <img src="${loc.image}" alt="${loc.title}">
+                        <p>${loc.description}</p>
+                    </div>
+                `;
+                
+                marker.bindPopup(popupContent);
+
+                // Store marker and its base dimensions
+                markers.push(marker);
+                markerIcons.push({
+                    url: loc.iconUrl,
+                    baseWidth: baseWidth,
+                    baseHeight: baseHeight
+                });
+            };
+            img.src = loc.iconUrl;
+        }
+
+        // Update all markers when zoom changes
+        map.on('zoomend', function() {
+            const zoom = map.getZoom();
+            markers.forEach((marker, index) => {
+                const icon = markerIcons[index];
+                const [width, height] = getIconSize(icon.baseWidth, icon.baseHeight, zoom);
+                
+                const newIcon = L.icon({
+                    iconUrl: icon.url,
+                    iconSize: [width, height],
+                    iconAnchor: [width/2, height],
+                    popupAnchor: [0, -height]
+                });
+                
+                marker.setIcon(newIcon);
+            });
+        });
+
+        // Create markers for all locations
+        locations.forEach(createMarker);
+    </script>
+</body>
+</html>
